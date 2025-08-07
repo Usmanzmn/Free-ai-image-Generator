@@ -16,7 +16,7 @@ st.set_page_config(
 
 try:
     st.image("assets/logo.png", width=140)
-except Exception as e:
+except Exception:
     st.warning("⚠️ Logo image failed to load.")
 
 st.title("🎨 PixelGenius: AI Image Generator")
@@ -27,7 +27,7 @@ st.divider()
 # Load API Token from Streamlit Secrets
 # -----------------------------
 try:
-    api_token = st.secrets["HUGGINGFACE_TOKEN"]  # ✅ Updated key name
+    api_token = st.secrets["HUGGINGFACE_TOKEN"]
     API_URL = "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0"
     HEADERS = {"Authorization": f"Bearer {api_token}"}
 except KeyError:
@@ -55,10 +55,10 @@ def apply_filters(img, brightness, contrast, sharpness):
 def get_image_download_link(img_list):
     zip_buffer = BytesIO()
     with zipfile.ZipFile(zip_buffer, "w") as zip_file:
-        for idx, img in enumerate(img_list):
+        for idx, (caption, img) in enumerate(img_list):
             img_buffer = BytesIO()
             img.save(img_buffer, format="PNG")
-            zip_file.writestr(f"image_{idx+1}.png", img_buffer.getvalue())
+            zip_file.writestr(f"{caption.replace(' ', '_')}.png", img_buffer.getvalue())
     zip_buffer.seek(0)
     b64 = base64.b64encode(zip_buffer.read()).decode()
     href = f'<a href="data:application/zip;base64,{b64}" download="pixelgenius_images.zip">⬇️ Download All Images (ZIP)</a>'
@@ -68,7 +68,8 @@ def get_image_download_link(img_list):
 # Sidebar Settings
 # -----------------------------
 st.sidebar.header("🧠 Generator Controls")
-style = st.sidebar.selectbox("🎨 Choose Style", ["Realistic", "Anime", "Sketch", "Cyberpunk"])
+style_options = ["Realistic", "Anime", "Sketch", "Cyberpunk", "All Styles"]
+style = st.sidebar.selectbox("🎨 Choose Style", style_options)
 num_images = st.sidebar.slider("🖼️ Number of Images", 1, 2, 1)
 
 st.sidebar.markdown("### 🎛️ Filters")
@@ -84,29 +85,30 @@ prompt = st.text_input("For example: *A futuristic city at sunset, in anime styl
 
 if prompt:
     if st.button("🚀 Generate Images"):
-        st.info(f"Generating {num_images} image(s) with **{style}** style...")
-        images = []
+        selected_styles = [style] if style != "All Styles" else ["Realistic", "Anime", "Sketch", "Cyberpunk"]
+        total_images = len(selected_styles) * num_images
+        st.info(f"Generating {total_images} image(s) with style(s): {', '.join(selected_styles)}")
+        
         history = st.session_state.get("prompt_history", [])
         history.append(prompt)
         st.session_state.prompt_history = history
 
+        images = []
         with st.spinner("Generating..."):
-            for _ in range(num_images):
-                full_prompt = f"{style} style, 1280x720 resolution - {prompt}"
-                img = generate_image(full_prompt)
-                if img:
-                    filtered_img = apply_filters(img, brightness, contrast, sharpness)
-                    images.append(filtered_img)
+            for s in selected_styles:
+                for i in range(num_images):
+                    img = generate_image(f"{s} style - {prompt}")
+                    if img:
+                        filtered_img = apply_filters(img, brightness, contrast, sharpness)
+                        images.append((f"{s} Image {i+1}", filtered_img))
 
         st.success("✅ Done!")
 
         if images:
-            cols = st.columns(len(images))
-            for i, img in enumerate(images):
-                with cols[i]:
-                    preview = img.copy()
-                    preview.thumbnail((640, 360))  # Medium preview size
-                    st.image(preview, caption=f"Image {i+1}", use_column_width=False)
+            cols = st.columns(min(4, len(images)))
+            for i, (caption, img) in enumerate(images):
+                with cols[i % len(cols)]:
+                    st.image(img.resize((640, 360)), caption=caption, use_column_width=False)
             st.markdown(get_image_download_link(images), unsafe_allow_html=True)
         else:
             st.warning("⚠️ No images were generated. Try another prompt or check API status.")
