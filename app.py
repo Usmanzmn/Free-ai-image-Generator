@@ -148,6 +148,7 @@ else:
     st.info("👈 Enter a prompt above to start generating images.")
 
 # -----------------------------
+# -----------------------------
 # Add Text to Uploaded Image
 # -----------------------------
 st.divider()
@@ -156,11 +157,55 @@ st.markdown("### 🖋️ Add Text to an Uploaded Image")
 uploaded_img = st.file_uploader("Upload image", type=["jpg", "jpeg", "png"], key="add_text_img")
 text_to_add = st.text_area("Enter your custom text here:", height=100)
 
+# New: Text size control
+text_size = st.slider("🔠 Text Size", min_value=10, max_value=100, value=30)
+
+# New: Font style selection
+font_options = {
+    "Arial": "arial.ttf",
+    "Courier": "cour.ttf",
+    "Times New Roman": "times.ttf",
+    "DejaVu Sans": "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    "Default (fallback)": None,
+}
+font_choice = st.selectbox("🖋️ Font Style", list(font_options.keys()))
+
+def add_text_to_image_centered_custom(img, custom_text, size, font_path):
+    img = img.convert("RGBA")
+    draw = ImageDraw.Draw(img)
+
+    # Load selected font or fallback
+    try:
+        if font_path:
+            font = ImageFont.truetype(font_path, size)
+        else:
+            font = ImageFont.load_default()
+    except:
+        font = ImageFont.load_default()
+
+    max_width = img.width - 40
+    lines = []
+    for line in custom_text.split("\n"):
+        lines.extend(textwrap.wrap(line, width=60))
+
+    total_height = sum([draw.textbbox((0, 0), line, font=font)[3] for line in lines]) + (len(lines) - 1) * 10
+    y = img.height // 2 + 20 - total_height // 2
+
+    for line in lines:
+        bbox = draw.textbbox((0, 0), line, font=font)
+        text_width = bbox[2] - bbox[0]
+        x = (img.width - text_width) // 2
+        draw.text((x, y), line, font=font, fill="white")
+        y += bbox[3] + 10
+
+    return img.convert("RGB")
+
 if st.button("🖼️ Generate Text Image"):
     if uploaded_img and text_to_add:
         with st.spinner("Processing image..."):
             img = Image.open(uploaded_img)
-            img_with_text = add_text_to_image_centered(img, text_to_add)
+            selected_font_path = font_options[font_choice]
+            img_with_text = add_text_to_image_centered_custom(img, text_to_add, text_size, selected_font_path)
 
             st.image(img_with_text, caption="Image with Text", use_column_width=True)
 
