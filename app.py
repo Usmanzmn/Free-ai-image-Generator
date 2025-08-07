@@ -14,11 +14,14 @@ st.set_page_config(
     layout="wide"
 )
 
-st.image("assets/logo.png", width=140)
+try:
+    st.image("assets/logo.png", width=140)
+except Exception as e:
+    st.warning("⚠️ Logo image failed to load.")
+
 st.title("🎨 PixelGenius: AI Image Generator")
 st.caption("Create high-quality images using Hugging Face Stable Diffusion XL (Free API) with real-time filters and styles.")
 st.divider()
-
 # -----------------------------
 # Load API Token from Streamlit Secrets
 # -----------------------------
