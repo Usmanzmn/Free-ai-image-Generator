@@ -22,18 +22,17 @@ except Exception as e:
 st.title("🎨 PixelGenius: AI Image Generator")
 st.caption("Create high-quality images using Hugging Face Stable Diffusion XL (Free API) with real-time filters and styles.")
 st.divider()
+
 # -----------------------------
 # Load API Token from Streamlit Secrets
 # -----------------------------
 try:
     api_token = st.secrets["HUGGINGFACE_TOKEN"]  # ✅ Updated key name
-    API_URL = "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0"  # ✅ Updated model
+    API_URL = "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0"
     HEADERS = {"Authorization": f"Bearer {api_token}"}
 except KeyError:
     st.error("🔴 API Token not found! Did you add it to Streamlit Secrets?")
     st.stop()
-
-
 
 # -----------------------------
 # Utility Functions
@@ -70,7 +69,7 @@ def get_image_download_link(img_list):
 # -----------------------------
 st.sidebar.header("🧠 Generator Controls")
 style = st.sidebar.selectbox("🎨 Choose Style", ["Realistic", "Anime", "Sketch", "Cyberpunk"])
-num_images = st.sidebar.slider("🖼️ Number of Images", 1, 2, 1)  # Keep 1–2 for free tier
+num_images = st.sidebar.slider("🖼️ Number of Images", 1, 2, 1)
 
 st.sidebar.markdown("### 🎛️ Filters")
 brightness = st.sidebar.slider("Brightness", 0.5, 2.0, 1.0)
@@ -93,7 +92,8 @@ if prompt:
 
         with st.spinner("Generating..."):
             for _ in range(num_images):
-                img = generate_image(f"{style} style - {prompt}")
+                full_prompt = f"{style} style, 1280x720 resolution - {prompt}"
+                img = generate_image(full_prompt)
                 if img:
                     filtered_img = apply_filters(img, brightness, contrast, sharpness)
                     images.append(filtered_img)
@@ -104,7 +104,9 @@ if prompt:
             cols = st.columns(len(images))
             for i, img in enumerate(images):
                 with cols[i]:
-                    st.image(img, caption=f"Image {i+1}", use_column_width="always")
+                    preview = img.copy()
+                    preview.thumbnail((320, 180))  # Small preview for UI
+                    st.image(preview, caption=f"Image {i+1}", use_column_width=False)
             st.markdown(get_image_download_link(images), unsafe_allow_html=True)
         else:
             st.warning("⚠️ No images were generated. Try another prompt or check API status.")
@@ -115,12 +117,3 @@ if prompt:
             st.markdown(f"{i}. _{p}_")
 else:
     st.info("👈 Enter a prompt above to start generating images.")
-
-
-
-
-
-
-
-
-
