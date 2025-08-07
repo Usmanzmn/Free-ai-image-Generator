@@ -4,6 +4,7 @@ from PIL import Image, ImageEnhance, ImageDraw, ImageFont
 from io import BytesIO
 import zipfile
 import base64
+import textwrap
 
 # -----------------------------
 # Config and Branding
@@ -64,24 +65,31 @@ def get_image_download_link(img_list):
     href = f'<a href="data:application/zip;base64,{b64}" download="pixelgenius_images.zip">⬇️ Download All Images (ZIP)</a>'
     return href
 
-def add_text_to_image(img, custom_text):
-    img = img.convert("RGB")
+def add_text_to_image_centered(img, custom_text):
+    img = img.convert("RGBA")
     draw = ImageDraw.Draw(img)
-    font_size = max(20, img.width // 20)
+    font_size = int(img.height * 0.035)
     try:
         font = ImageFont.truetype("arial.ttf", font_size)
     except:
         font = ImageFont.load_default()
 
-    # Use draw.textbbox for compatibility
-    bbox = draw.textbbox((0, 0), custom_text, font=font)
-    text_width = bbox[2] - bbox[0]
-    text_height = bbox[3] - bbox[1]
-    x = (img.width - text_width) // 2
-    y = img.height // 2 + text_height
+    max_width = img.width - 40
+    lines = []
+    for line in custom_text.split("\n"):
+        lines.extend(textwrap.wrap(line, width=60))
 
-    draw.text((x, y), custom_text, font=font, fill="white")
-    return img
+    total_height = sum([draw.textbbox((0, 0), line, font=font)[3] for line in lines]) + (len(lines) - 1) * 10
+    y = img.height // 2 + 20 - total_height // 2
+
+    for line in lines:
+        bbox = draw.textbbox((0, 0), line, font=font)
+        text_width = bbox[2] - bbox[0]
+        x = (img.width - text_width) // 2
+        draw.text((x, y), line, font=font, fill="white")
+        y += bbox[3] + 10
+
+    return img.convert("RGB")
 
 # -----------------------------
 # Sidebar Settings
@@ -107,7 +115,7 @@ if prompt:
         selected_styles = [style] if style != "All Styles" else ["Realistic", "Anime", "Sketch", "Cyberpunk"]
         total_images = len(selected_styles) * num_images
         st.info(f"Generating {total_images} image(s) with style(s): {', '.join(selected_styles)}")
-        
+
         history = st.session_state.get("prompt_history", [])
         history.append(prompt)
         st.session_state.prompt_history = history
@@ -140,24 +148,26 @@ else:
     st.info("👈 Enter a prompt above to start generating images.")
 
 # -----------------------------
-# Extra Feature: Upload + Add Text
+# Add Text to Uploaded Image
 # -----------------------------
 st.divider()
 st.markdown("### 🖋️ Add Text to an Uploaded Image")
 
-uploaded_image = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png"])
-custom_text = st.text_input("Text to add to image")
+uploaded_img = st.file_uploader("Upload image", type=["jpg", "jpeg", "png"], key="add_text_img")
+text_to_add = st.text_area("Enter your custom text here:", height=100)
 
-if uploaded_image and custom_text:
-    if st.button("🖼️ Generate Image with Text"):
-        with st.spinner("Adding text to image..."):
-            img = Image.open(uploaded_image)
-            img_with_text = add_text_to_image(img, custom_text)
-            st.image(img_with_text.resize((640, 360)), caption="Image with Text", use_column_width=False)
+if st.button("🖼️ Generate Text Image"):
+    if uploaded_img and text_to_add:
+        with st.spinner("Processing image..."):
+            img = Image.open(uploaded_img)
+            img_with_text = add_text_to_image_centered(img, text_to_add)
 
-            # Download link
+            st.image(img_with_text, caption="Image with Text", use_column_width=True)
+
             img_buffer = BytesIO()
             img_with_text.save(img_buffer, format="PNG")
             b64 = base64.b64encode(img_buffer.getvalue()).decode()
-            href = f'<a href="data:image/png;base64,{b64}" download="image_with_text.png">⬇️ Download Image with Text</a>'
+            href = f'<a href="data:image/png;base64,{b64}" download="text_image.png">⬇️ Download Text Image</a>'
             st.markdown(href, unsafe_allow_html=True)
+    else:
+        st.warning("⚠️ Please upload an image and enter some text.")
