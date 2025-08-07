@@ -130,7 +130,7 @@ text_size = st.slider("🔠 Text Size", min_value=10, max_value=100, value=30)
 
 font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
 
-def add_text_to_image_centered_custom(img, custom_text, size, font_path):
+def add_text_to_image_centered_custom(img, custom_text, size, font_path, text_color="#FFFFFF"):
     img = img.convert("RGBA")
     draw = ImageDraw.Draw(img)
 
@@ -141,10 +141,10 @@ def add_text_to_image_centered_custom(img, custom_text, size, font_path):
         font = ImageFont.load_default()
 
     width, height = img.size
-    padding = 50  # 50px left and right
+    padding = 50  # 50px clear space on both sides
     max_text_width = width - (2 * padding)
 
-    # Wrap text manually based on visual width
+    # Wrap text based on pixel width
     lines = []
     for paragraph in custom_text.split("\n"):
         current_line = ""
@@ -160,12 +160,18 @@ def add_text_to_image_centered_custom(img, custom_text, size, font_path):
 
     line_height = font.getbbox("A")[3] - font.getbbox("A")[1] + 10
     total_text_height = len(lines) * line_height
-    start_y = height // 2 + (height // 4 - total_text_height // 2)  # Bottom half centered
+    start_y = height // 2 + (height // 4 - total_text_height // 2)  # Start in bottom half
 
     for line in lines:
         text_width = font.getlength(line)
         x = (width - text_width) // 2
-        draw.text((x, start_y), line, font=font, fill="white")
+
+        # Shadow first (black with alpha)
+        shadow_offset = 2
+        draw.text((x + shadow_offset, start_y + shadow_offset), line, font=font, fill=(0, 0, 0, 180))
+
+        # Then main text
+        draw.text((x, start_y), line, font=font, fill=text_color)
         start_y += line_height
 
     return img.convert("RGB")
