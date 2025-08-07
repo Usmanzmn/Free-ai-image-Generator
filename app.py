@@ -169,3 +169,19 @@ def add_text_to_image_centered_custom(img, custom_text, size, font_path):
         start_y += line_height
 
     return img.convert("RGB")
+
+if st.button("🖼️ Generate Text Image"):
+    if uploaded_img and text_to_add:
+        with st.spinner("Processing image..."):
+            img = Image.open(uploaded_img)
+            img_with_text = add_text_to_image_centered_custom(img, text_to_add, text_size, font_path)
+
+            st.image(img_with_text, caption="Image with Text", use_column_width=True)
+
+            img_buffer = BytesIO()
+            img_with_text.save(img_buffer, format="PNG")
+            b64 = base64.b64encode(img_buffer.getvalue()).decode()
+            href = f'<a href="data:image/png;base64,{b64}" download="text_image.png">⬇️ Download Text Image</a>'
+            st.markdown(href, unsafe_allow_html=True)
+    else:
+        st.warning("⚠️ Please upload an image and enter some text.")
