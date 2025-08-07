@@ -141,16 +141,15 @@ def add_text_to_image_centered_custom(img, custom_text, size, font_path):
         font = ImageFont.load_default()
 
     width, height = img.size
-    left_padding = 100
-    right_padding = 100
-    max_text_width = width - left_padding - right_padding
+    padding = 50  # 50px left and right
+    max_text_width = width - (2 * padding)
 
     # Wrap text manually based on visual width
     lines = []
     for paragraph in custom_text.split("\n"):
         current_line = ""
         for word in paragraph.split():
-            test_line = current_line + " " + word if current_line else word
+            test_line = f"{current_line} {word}".strip()
             if font.getlength(test_line) <= max_text_width:
                 current_line = test_line
             else:
@@ -161,7 +160,7 @@ def add_text_to_image_centered_custom(img, custom_text, size, font_path):
 
     line_height = font.getbbox("A")[3] - font.getbbox("A")[1] + 10
     total_text_height = len(lines) * line_height
-    start_y = height // 2 + (height // 4 - total_text_height // 2)
+    start_y = height // 2 + (height // 4 - total_text_height // 2)  # Bottom half centered
 
     for line in lines:
         text_width = font.getlength(line)
@@ -170,19 +169,3 @@ def add_text_to_image_centered_custom(img, custom_text, size, font_path):
         start_y += line_height
 
     return img.convert("RGB")
-
-if st.button("🖼️ Generate Text Image"):
-    if uploaded_img and text_to_add:
-        with st.spinner("Processing image..."):
-            img = Image.open(uploaded_img)
-            img_with_text = add_text_to_image_centered_custom(img, text_to_add, text_size, font_path)
-
-            st.image(img_with_text, caption="Image with Text", use_column_width=True)
-
-            img_buffer = BytesIO()
-            img_with_text.save(img_buffer, format="PNG")
-            b64 = base64.b64encode(img_buffer.getvalue()).decode()
-            href = f'<a href="data:image/png;base64,{b64}" download="text_image.png">⬇️ Download Text Image</a>'
-            st.markdown(href, unsafe_allow_html=True)
-    else:
-        st.warning("⚠️ Please upload an image and enter some text.")
