@@ -20,7 +20,7 @@ try:
 except Exception:
     st.warning("⚠️ Logo image failed to load.")
 
-st.title("🎨 PFree-AI Image Generator")
+st.title("🎨 Free-AI Image Generator")
 st.caption("Create high-quality images using Hugging Face Stable Diffusion XL (Free API) with real-time filters and styles.")
 st.divider()
 
