@@ -119,17 +119,30 @@ else:
     st.info("👈 Enter a prompt above to start generating images.")
 
 # -----------------------------
-# Text on Uploaded Image
+# -----------------------------
+# Add Text to Uploaded Image
 # -----------------------------
 st.divider()
 st.markdown("### 🖋️ Add Text to an Uploaded Image")
 
 uploaded_img = st.file_uploader("Upload image", type=["jpg", "jpeg", "png"], key="add_text_img")
 text_to_add = st.text_area("Enter your custom text here:", height=100)
+
 text_size = st.slider("🔠 Text Size", min_value=10, max_value=100, value=30)
+text_color = st.color_picker("🎨 Text Color", "#FFFFFF")
 
-font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+# Font style selection (DejaVu only to avoid font errors)
+dejavu_styles = {
+    "DejaVu Sans": "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    "DejaVu Bold": "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    "DejaVu Italic": "/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf",
+    "DejaVu Bold Italic": "/usr/share/fonts/truetype/dejavu/DejaVuSans-BoldOblique.ttf"
+}
+font_choice = st.selectbox("🖋️ Font Style", list(dejavu_styles.keys()))
+selected_font_path = dejavu_styles[font_choice]
 
+
+# -------------- FUNCTION TO DRAW TEXT --------------------
 def add_text_to_image_centered_custom(img, custom_text, size, font_path, text_color="#FFFFFF"):
     img = img.convert("RGBA")
     draw = ImageDraw.Draw(img)
@@ -141,10 +154,10 @@ def add_text_to_image_centered_custom(img, custom_text, size, font_path, text_co
         font = ImageFont.load_default()
 
     width, height = img.size
-    padding = 50  # 50px clear space on both sides
+    padding = 50  # 50px space left and right
     max_text_width = width - (2 * padding)
 
-    # Wrap text based on pixel width
+    # Wrap text manually using pixel length
     lines = []
     for paragraph in custom_text.split("\n"):
         current_line = ""
@@ -160,30 +173,36 @@ def add_text_to_image_centered_custom(img, custom_text, size, font_path, text_co
 
     line_height = font.getbbox("A")[3] - font.getbbox("A")[1] + 10
     total_text_height = len(lines) * line_height
-    start_y = height // 2 + (height // 4 - total_text_height // 2)  # Start in bottom half
+
+    # Start Y in bottom half, but fully visible
+    start_y = height // 2 + (height // 4 - total_text_height // 2)
 
     for line in lines:
         text_width = font.getlength(line)
         x = (width - text_width) // 2
 
-        # Shadow first (black with alpha)
+        # Shadow
         shadow_offset = 2
         draw.text((x + shadow_offset, start_y + shadow_offset), line, font=font, fill=(0, 0, 0, 180))
 
-        # Then main text
+        # Main Text
         draw.text((x, start_y), line, font=font, fill=text_color)
         start_y += line_height
 
     return img.convert("RGB")
 
+
+# -------------- BUTTON & OUTPUT --------------------
 if st.button("🖼️ Generate Text Image"):
     if uploaded_img and text_to_add:
         with st.spinner("Processing image..."):
             img = Image.open(uploaded_img)
-            img_with_text = add_text_to_image_centered_custom(img, text_to_add, text_size, font_path)
-
+            img_with_text = add_text_to_image_centered_custom(
+                img, text_to_add, text_size, selected_font_path, text_color
+            )
             st.image(img_with_text, caption="Image with Text", use_column_width=True)
 
+            # Download link
             img_buffer = BytesIO()
             img_with_text.save(img_buffer, format="PNG")
             b64 = base64.b64encode(img_buffer.getvalue()).decode()
