@@ -65,34 +65,8 @@ def get_image_download_link(img_list):
     href = f'<a href="data:application/zip;base64,{b64}" download="pixelgenius_images.zip">⬇️ Download All Images (ZIP)</a>'
     return href
 
-def add_text_to_image_centered(img, custom_text):
-    img = img.convert("RGBA")
-    draw = ImageDraw.Draw(img)
-    font_size = int(img.height * 0.035)
-    try:
-        font = ImageFont.truetype("arial.ttf", font_size)
-    except:
-        font = ImageFont.load_default()
-
-    max_width = img.width - 40
-    lines = []
-    for line in custom_text.split("\n"):
-        lines.extend(textwrap.wrap(line, width=60))
-
-    total_height = sum([draw.textbbox((0, 0), line, font=font)[3] for line in lines]) + (len(lines) - 1) * 10
-    y = img.height // 2 + 20 - total_height // 2
-
-    for line in lines:
-        bbox = draw.textbbox((0, 0), line, font=font)
-        text_width = bbox[2] - bbox[0]
-        x = (img.width - text_width) // 2
-        draw.text((x, y), line, font=font, fill="white")
-        y += bbox[3] + 10
-
-    return img.convert("RGB")
-
 # -----------------------------
-# Sidebar Settings
+# Generator UI
 # -----------------------------
 st.sidebar.header("🧠 Generator Controls")
 style_options = ["Realistic", "Anime", "Sketch", "Cyberpunk", "All Styles"]
@@ -104,9 +78,6 @@ brightness = st.sidebar.slider("Brightness", 0.5, 2.0, 1.0)
 contrast = st.sidebar.slider("Contrast", 0.5, 2.0, 1.0)
 sharpness = st.sidebar.slider("Sharpness", 0.5, 2.0, 1.0)
 
-# -----------------------------
-# Main UI: Prompt to Image
-# -----------------------------
 st.markdown("### ✏️ Enter your prompt")
 prompt = st.text_input("For example: *A futuristic city at sunset, in anime style*")
 
@@ -148,8 +119,7 @@ else:
     st.info("👈 Enter a prompt above to start generating images.")
 
 # -----------------------------
-# -----------------------------
-# Add Text to Uploaded Image
+# Text on Uploaded Image
 # -----------------------------
 st.divider()
 st.markdown("### 🖋️ Add Text to an Uploaded Image")
@@ -157,10 +127,9 @@ st.markdown("### 🖋️ Add Text to an Uploaded Image")
 uploaded_img = st.file_uploader("Upload image", type=["jpg", "jpeg", "png"], key="add_text_img")
 text_to_add = st.text_area("Enter your custom text here:", height=100)
 
-# Text size control
+# Text size and font style
 text_size = st.slider("🔠 Text Size", min_value=10, max_value=100, value=30)
 
-# Font style selection
 font_options = {
     "Arial": "arial.ttf",
     "Courier": "cour.ttf",
@@ -169,16 +138,12 @@ font_options = {
     "Default (fallback)": None,
 }
 font_choice = st.selectbox("🖋️ Font Style", list(font_options.keys()))
+selected_font_path = font_options[font_choice]
 
-# Function to add centered text
 def add_text_to_image_centered_custom(img, custom_text, size, font_path):
-    from PIL import ImageDraw, ImageFont
-    import textwrap
-
     img = img.convert("RGBA")
     draw = ImageDraw.Draw(img)
 
-    # Load font
     try:
         if font_path:
             font = ImageFont.truetype(font_path, size)
@@ -187,30 +152,26 @@ def add_text_to_image_centered_custom(img, custom_text, size, font_path):
     except:
         font = ImageFont.load_default()
 
-    # Wrap and center text
-    max_width = img.width - 40
     wrapped_lines = []
     for line in custom_text.split("\n"):
         wrapped_lines.extend(textwrap.wrap(line, width=40))
 
-    line_height = font.getsize("Ay")[1] + 10
-    block_height = line_height * len(wrapped_lines)
+    line_heights = [font.getbbox(line)[3] - font.getbbox(line)[1] + 10 for line in wrapped_lines]
+    block_height = sum(line_heights)
     y = (img.height - block_height) // 2
 
-    for line in wrapped_lines:
-        text_width = font.getsize(line)[0]
+    for i, line in enumerate(wrapped_lines):
+        text_width = font.getbbox(line)[2] - font.getbbox(line)[0]
         x = (img.width - text_width) // 2
         draw.text((x, y), line, font=font, fill="white")
-        y += line_height
+        y += line_heights[i]
 
     return img.convert("RGB")
 
-# Button to generate
 if st.button("🖼️ Generate Text Image"):
     if uploaded_img and text_to_add:
         with st.spinner("Processing image..."):
             img = Image.open(uploaded_img)
-            selected_font_path = font_options[font_choice]
             img_with_text = add_text_to_image_centered_custom(img, text_to_add, text_size, selected_font_path)
 
             st.image(img_with_text, caption="Image with Text", use_column_width=True)
@@ -222,4 +183,3 @@ if st.button("🖼️ Generate Text Image"):
             st.markdown(href, unsafe_allow_html=True)
     else:
         st.warning("⚠️ Please upload an image and enter some text.")
-
