@@ -10,7 +10,7 @@ import textwrap
 # Config and Branding
 # -----------------------------
 st.set_page_config(
-    page_title="PixelGenius - AI Image Generator",
+    page_title="Free-AI Image Generator",
     page_icon="🎨",
     layout="wide"
 )
