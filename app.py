@@ -145,12 +145,15 @@ def add_text_to_image_centered_custom(img, custom_text, size, font_path):
     draw = ImageDraw.Draw(img)
 
     try:
-        if font_path:
-            font = ImageFont.truetype(font_path, size)
-        else:
-            font = ImageFont.load_default()
-    except:
-        font = ImageFont.load_default()
+    if font_path:
+        font = ImageFont.truetype(font_path, size)
+    else:
+        # Use DejaVuSans as a fallback if no font is selected
+        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", size)
+except Exception as e:
+    st.error(f"Font loading failed: {e}")
+    font = ImageFont.load_default()
+
 
     wrapped_lines = []
     for line in custom_text.split("\n"):
