@@ -1,6 +1,7 @@
+# 🔄 ORIGINAL IMPORTS
 import streamlit as st
 import requests
-from PIL import Image, ImageEnhance
+from PIL import Image, ImageEnhance, ImageDraw, ImageFont
 from io import BytesIO
 import zipfile
 import base64
@@ -24,7 +25,7 @@ st.caption("Create high-quality images using Hugging Face Stable Diffusion XL (F
 st.divider()
 
 # -----------------------------
-# Load API Token from Streamlit Secrets
+# Load API Token
 # -----------------------------
 try:
     api_token = st.secrets["HUGGINGFACE_TOKEN"]
@@ -78,7 +79,7 @@ contrast = st.sidebar.slider("Contrast", 0.5, 2.0, 1.0)
 sharpness = st.sidebar.slider("Sharpness", 0.5, 2.0, 1.0)
 
 # -----------------------------
-# Main UI
+# Prompt Input
 # -----------------------------
 st.markdown("### ✏️ Enter your prompt")
 prompt = st.text_input("For example: *A futuristic city at sunset, in anime style*")
@@ -88,7 +89,7 @@ if prompt:
         selected_styles = [style] if style != "All Styles" else ["Realistic", "Anime", "Sketch", "Cyberpunk"]
         total_images = len(selected_styles) * num_images
         st.info(f"Generating {total_images} image(s) with style(s): {', '.join(selected_styles)}")
-        
+
         history = st.session_state.get("prompt_history", [])
         history.append(prompt)
         st.session_state.prompt_history = history
@@ -119,3 +120,47 @@ if prompt:
             st.markdown(f"{i}. _{p}_")
 else:
     st.info("👈 Enter a prompt above to start generating images.")
+
+# -----------------------------
+# 🔤 NEW SECTION: Add Text to Uploaded Image
+# -----------------------------
+st.divider()
+st.header("🖋️ Add Text to Your Image")
+
+uploaded_img = st.file_uploader("📤 Upload an image (PNG or JPG)", type=["png", "jpg", "jpeg"])
+custom_text = st.text_input("✏️ Enter the text to add below the midpoint")
+
+if uploaded_img and custom_text:
+    img = Image.open(uploaded_img).convert("RGB")
+    draw = ImageDraw.Draw(img)
+
+    # Font setup
+    font_size = int(img.height * 0.05)
+    try:
+        font = ImageFont.truetype("arial.ttf", font_size)
+    except:
+        font = ImageFont.load_default()
+
+    # Text dimensions and position
+    text_width, text_height = draw.textsize(custom_text, font=font)
+    x = (img.width - text_width) // 2
+    y = img.height // 2 + text_height
+
+    # Draw black outline and white text
+    outline_range = 2
+    for ox in range(-outline_range, outline_range + 1):
+        for oy in range(-outline_range, outline_range + 1):
+            draw.text((x + ox, y + oy), custom_text, font=font, fill="black")
+    draw.text((x, y), custom_text, fill="white", font=font)
+
+    st.image(img.resize((640, 360)), caption="🖼️ Image with Text", use_column_width=False)
+
+    output = BytesIO()
+    img.save(output, format="PNG")
+    output.seek(0)
+    st.download_button(
+        label="💾 Download Image with Text",
+        data=output,
+        file_name="image_with_text.png",
+        mime="image/png"
+    )
