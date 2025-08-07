@@ -150,6 +150,27 @@ else:
 # -----------------------------
 # -----------------------------
 # Add Text to Uploaded Image
+# -----------------------------
+st.divider()
+st.markdown("### 🖋️ Add Text to an Uploaded Image")
+
+uploaded_img = st.file_uploader("Upload image", type=["jpg", "jpeg", "png"], key="add_text_img")
+text_to_add = st.text_area("Enter your custom text here:", height=100)
+
+# Text size control
+text_size = st.slider("🔠 Text Size", min_value=10, max_value=100, value=30)
+
+# Font style selection
+font_options = {
+    "Arial": "arial.ttf",
+    "Courier": "cour.ttf",
+    "Times New Roman": "times.ttf",
+    "DejaVu Sans": "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    "Default (fallback)": None,
+}
+font_choice = st.selectbox("🖋️ Font Style", list(font_options.keys()))
+
+# Function to add centered text
 def add_text_to_image_centered_custom(img, custom_text, size, font_path):
     from PIL import ImageDraw, ImageFont
     import textwrap
@@ -166,28 +187,39 @@ def add_text_to_image_centered_custom(img, custom_text, size, font_path):
     except:
         font = ImageFont.load_default()
 
-    # Wrap text manually
+    # Wrap and center text
     max_width = img.width - 40
     wrapped_lines = []
     for line in custom_text.split("\n"):
-        wrapped = textwrap.wrap(line, width=40)
-        wrapped_lines.extend(wrapped)
+        wrapped_lines.extend(textwrap.wrap(line, width=40))
 
-    # Calculate line height using textbbox
-    line_heights = []
+    line_height = font.getsize("Ay")[1] + 10
+    block_height = line_height * len(wrapped_lines)
+    y = (img.height - block_height) // 2
+
     for line in wrapped_lines:
-        bbox = draw.textbbox((0, 0), line, font=font)
-        line_height = bbox[3] - bbox[1]
-        line_heights.append(line_height)
-
-    total_height = sum(line_heights) + (len(wrapped_lines) - 1) * 10
-    y = (img.height - total_height) // 2
-
-    for i, line in enumerate(wrapped_lines):
-        bbox = draw.textbbox((0, 0), line, font=font)
-        text_width = bbox[2] - bbox[0]
+        text_width = font.getsize(line)[0]
         x = (img.width - text_width) // 2
         draw.text((x, y), line, font=font, fill="white")
-        y += line_heights[i] + 10
+        y += line_height
 
     return img.convert("RGB")
+
+# Button to generate
+if st.button("🖼️ Generate Text Image"):
+    if uploaded_img and text_to_add:
+        with st.spinner("Processing image..."):
+            img = Image.open(uploaded_img)
+            selected_font_path = font_options[font_choice]
+            img_with_text = add_text_to_image_centered_custom(img, text_to_add, text_size, selected_font_path)
+
+            st.image(img_with_text, caption="Image with Text", use_column_width=True)
+
+            img_buffer = BytesIO()
+            img_with_text.save(img_buffer, format="PNG")
+            b64 = base64.b64encode(img_buffer.getvalue()).decode()
+            href = f'<a href="data:image/png;base64,{b64}" download="text_image.png">⬇️ Download Text Image</a>'
+            st.markdown(href, unsafe_allow_html=True)
+    else:
+        st.warning("⚠️ Please upload an image and enter some text.")
+
