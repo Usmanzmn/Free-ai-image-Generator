@@ -127,15 +127,13 @@ st.markdown("### 🖋️ Add Text to an Uploaded Image")
 uploaded_img = st.file_uploader("Upload image", type=["jpg", "jpeg", "png"], key="add_text_img")
 text_to_add = st.text_area("Enter your custom text here:", height=100)
 
-# Text size and font style
 text_size = st.slider("🔠 Text Size", min_value=10, max_value=100, value=30)
 
 font_options = {
-    "DejaVu Sans": "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-    "Arial": "arial.ttf",
-    "Courier": "cour.ttf",
-    "Times New Roman": "times.ttf",
+    "DejaVu Sans (Default)": "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
     "Default (fallback)": None,
+    # You can add your own .ttf fonts to assets folder
+    # "MyFont": "assets/myfont.ttf"
 }
 font_choice = st.selectbox("🖋️ Font Style", list(font_options.keys()))
 selected_font_path = font_options[font_choice]
@@ -145,28 +143,24 @@ def add_text_to_image_centered_custom(img, custom_text, size, font_path):
     draw = ImageDraw.Draw(img)
 
     try:
-        if font_path:
-            font = ImageFont.truetype(font_path, size)
-        else:
-            # Use resizable fallback font instead of load_default
-            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", size)
+        font = ImageFont.truetype(font_path, size) if font_path else ImageFont.load_default()
     except Exception as e:
         st.error(f"Font load failed: {e}")
         font = ImageFont.load_default()
 
-    wrapped_lines = []
-    for line in custom_text.split("\n"):
-        wrapped_lines.extend(textwrap.wrap(line, width=40))
+    max_chars_per_line = img.width // (size // 2)
+    wrapped_lines = textwrap.wrap(custom_text, width=max_chars_per_line)
 
-    line_heights = [font.getbbox(line)[3] - font.getbbox(line)[1] + 10 for line in wrapped_lines]
-    block_height = sum(line_heights)
-    y = (img.height - block_height) // 2
+    line_height = font.getbbox("A")[3] - font.getbbox("A")[1] + 10
+    total_text_height = len(wrapped_lines) * line_height
 
-    for i, line in enumerate(wrapped_lines):
+    y = (img.height - total_text_height) // 2
+
+    for line in wrapped_lines:
         text_width = font.getbbox(line)[2] - font.getbbox(line)[0]
         x = (img.width - text_width) // 2
         draw.text((x, y), line, font=font, fill="white")
-        y += line_heights[i]
+        y += line_height
 
     return img.convert("RGB")
 
