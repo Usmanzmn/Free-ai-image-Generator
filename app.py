@@ -105,7 +105,7 @@ if prompt:
             for i, img in enumerate(images):
                 with cols[i]:
                     preview = img.copy()
-                    preview.thumbnail((320, 180))  # Small preview for UI
+                    preview.thumbnail((640, 360))  # Medium preview size
                     st.image(preview, caption=f"Image {i+1}", use_column_width=False)
             st.markdown(get_image_download_link(images), unsafe_allow_html=True)
         else:
