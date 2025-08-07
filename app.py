@@ -119,7 +119,6 @@ else:
     st.info("👈 Enter a prompt above to start generating images.")
 
 # -----------------------------
-# -----------------------------
 # Add Text to Uploaded Image
 # -----------------------------
 st.divider()
@@ -129,21 +128,29 @@ uploaded_img = st.file_uploader("Upload image", type=["jpg", "jpeg", "png"], key
 text_to_add = st.text_area("Enter your custom text here:", height=100)
 
 text_size = st.slider("🔠 Text Size", min_value=10, max_value=100, value=30)
-text_color = st.color_picker("🎨 Text Color", "#FFFFFF")
 
-# Font style selection (DejaVu only to avoid font errors)
-dejavu_styles = {
-    "DejaVu Sans": "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-    "DejaVu Bold": "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-    "DejaVu Italic": "/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf",
-    "DejaVu Bold Italic": "/usr/share/fonts/truetype/dejavu/DejaVuSans-BoldOblique.ttf"
+# 🎨 Predefined text colors
+text_color_options = {
+    "White": "#FFFFFF",
+    "Black": "#000000",
+    "Red": "#FF0000",
+    "Pink": "#FFC0CB",
+    "Yellow": "#FFFF00"
 }
-font_choice = st.selectbox("🖋️ Font Style", list(dejavu_styles.keys()))
-selected_font_path = dejavu_styles[font_choice]
+selected_color_name = st.selectbox("🎨 Text Color", list(text_color_options.keys()))
+text_color = text_color_options[selected_color_name]
+
+# ✅ Only working fonts
+font_options = {
+    "DejaVu Sans": "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    "DejaVu Sans Bold": "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+}
+font_choice = st.selectbox("🖋️ Font Style", list(font_options.keys()))
+selected_font_path = font_options[font_choice]
 
 
-# -------------- FUNCTION TO DRAW TEXT --------------------
-def add_text_to_image_centered_custom(img, custom_text, size, font_path, text_color="#FFFFFF"):
+# ---------------- FUNCTION ----------------
+def add_text_to_image_centered_custom(img, custom_text, size, font_path, text_color):
     img = img.convert("RGBA")
     draw = ImageDraw.Draw(img)
 
@@ -154,10 +161,10 @@ def add_text_to_image_centered_custom(img, custom_text, size, font_path, text_co
         font = ImageFont.load_default()
 
     width, height = img.size
-    padding = 50  # 50px space left and right
+    padding = 50  # 50px clear space left/right
     max_text_width = width - (2 * padding)
 
-    # Wrap text manually using pixel length
+    # Wrap text by pixel width
     lines = []
     for paragraph in custom_text.split("\n"):
         current_line = ""
@@ -171,10 +178,9 @@ def add_text_to_image_centered_custom(img, custom_text, size, font_path, text_co
         if current_line:
             lines.append(current_line)
 
+    # Calculate Y position in bottom half
     line_height = font.getbbox("A")[3] - font.getbbox("A")[1] + 10
     total_text_height = len(lines) * line_height
-
-    # Start Y in bottom half, but fully visible
     start_y = height // 2 + (height // 4 - total_text_height // 2)
 
     for line in lines:
@@ -192,7 +198,7 @@ def add_text_to_image_centered_custom(img, custom_text, size, font_path, text_co
     return img.convert("RGB")
 
 
-# -------------- BUTTON & OUTPUT --------------------
+# ---------------- BUTTON & OUTPUT ----------------
 if st.button("🖼️ Generate Text Image"):
     if uploaded_img and text_to_add:
         with st.spinner("Processing image..."):
@@ -210,3 +216,5 @@ if st.button("🖼️ Generate Text Image"):
             st.markdown(href, unsafe_allow_html=True)
     else:
         st.warning("⚠️ Please upload an image and enter some text.")
+
+
