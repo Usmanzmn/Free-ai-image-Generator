@@ -131,10 +131,10 @@ text_to_add = st.text_area("Enter your custom text here:", height=100)
 text_size = st.slider("🔠 Text Size", min_value=10, max_value=100, value=30)
 
 font_options = {
+    "DejaVu Sans": "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
     "Arial": "arial.ttf",
     "Courier": "cour.ttf",
     "Times New Roman": "times.ttf",
-    "DejaVu Sans": "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
     "Default (fallback)": None,
 }
 font_choice = st.selectbox("🖋️ Font Style", list(font_options.keys()))
@@ -145,15 +145,14 @@ def add_text_to_image_centered_custom(img, custom_text, size, font_path):
     draw = ImageDraw.Draw(img)
 
     try:
-    if font_path:
-        font = ImageFont.truetype(font_path, size)
-    else:
-        # Use DejaVuSans as a fallback if no font is selected
-        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", size)
-except Exception as e:
-    st.error(f"Font loading failed: {e}")
-    font = ImageFont.load_default()
-
+        if font_path:
+            font = ImageFont.truetype(font_path, size)
+        else:
+            # Use resizable fallback font instead of load_default
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", size)
+    except Exception as e:
+        st.error(f"Font load failed: {e}")
+        font = ImageFont.load_default()
 
     wrapped_lines = []
     for line in custom_text.split("\n"):
