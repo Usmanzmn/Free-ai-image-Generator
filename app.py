@@ -2,7 +2,6 @@ import streamlit as st
 import requests
 from PIL import Image, ImageEnhance, ImageDraw, ImageFont
 from io import BytesIO
-import zipfile
 import base64
 import textwrap
 
@@ -53,17 +52,12 @@ def apply_filters(img, brightness, contrast, sharpness):
     img = ImageEnhance.Sharpness(img).enhance(sharpness)
     return img
 
-def get_image_download_link(img_list):
-    zip_buffer = BytesIO()
-    with zipfile.ZipFile(zip_buffer, "w") as zip_file:
-        for idx, (caption, img) in enumerate(img_list):
-            img_buffer = BytesIO()
-            img.save(img_buffer, format="PNG")
-            zip_file.writestr(f"{caption.replace(' ', '_')}.png", img_buffer.getvalue())
-    zip_buffer.seek(0)
-    b64 = base64.b64encode(zip_buffer.read()).decode()
-    href = f'<a href="data:application/zip;base64,{b64}" download="pixelgenius_images.zip">⬇️ Download All Images (ZIP)</a>'
-    return href
+def get_image_download_button(img, filename):
+    buffer = BytesIO()
+    resized_img = img.resize((1280, 720))
+    resized_img.save(buffer, format="JPEG")
+    b64 = base64.b64encode(buffer.getvalue()).decode()
+    return f'<a href="data:image/jpeg;base64,{b64}" download="{filename}">⬇️ Download JPG</a>'
 
 # -----------------------------
 # Generator UI
@@ -98,7 +92,7 @@ if prompt:
                     img = generate_image(f"{s} style - {prompt}")
                     if img:
                         filtered_img = apply_filters(img, brightness, contrast, sharpness)
-                        images.append((f"{s} Image {i+1}", filtered_img))
+                        images.append((f"{s}_image_{i+1}", filtered_img))
 
         st.success("✅ Done!")
 
@@ -106,8 +100,8 @@ if prompt:
             cols = st.columns(min(4, len(images)))
             for i, (caption, img) in enumerate(images):
                 with cols[i % len(cols)]:
-                    st.image(img.resize((640, 360)), caption=caption, use_column_width=False)
-            st.markdown(get_image_download_link(images), unsafe_allow_html=True)
+                    st.image(img.resize((640, 360)), caption=caption)
+                    st.markdown(get_image_download_button(img, f"{caption}.jpg"), unsafe_allow_html=True)
         else:
             st.warning("⚠️ No images were generated. Try another prompt or check API status.")
 
@@ -126,7 +120,6 @@ st.markdown("### 🖋️ Add Text to an Uploaded Image")
 
 uploaded_img = st.file_uploader("Upload image", type=["jpg", "jpeg", "png"], key="add_text_img")
 text_to_add = st.text_area("Enter your custom text here:", height=100)
-
 text_size = st.slider("🔠 Text Size", min_value=10, max_value=100, value=30)
 
 # 🎨 Predefined text colors
@@ -148,7 +141,6 @@ font_options = {
 font_choice = st.selectbox("🖋️ Font Style", list(font_options.keys()))
 selected_font_path = font_options[font_choice]
 
-
 # ---------------- FUNCTION ----------------
 def add_text_to_image_centered_custom(img, custom_text, size, font_path, text_color):
     img = img.convert("RGBA")
@@ -161,10 +153,9 @@ def add_text_to_image_centered_custom(img, custom_text, size, font_path, text_co
         font = ImageFont.load_default()
 
     width, height = img.size
-    padding = 50  # 50px clear space left/right
+    padding = 50
     max_text_width = width - (2 * padding)
 
-    # Wrap text by pixel width
     lines = []
     for paragraph in custom_text.split("\n"):
         current_line = ""
@@ -178,7 +169,6 @@ def add_text_to_image_centered_custom(img, custom_text, size, font_path, text_co
         if current_line:
             lines.append(current_line)
 
-    # Calculate Y position in bottom half
     line_height = font.getbbox("A")[3] - font.getbbox("A")[1] + 10
     total_text_height = len(lines) * line_height
     start_y = height // 2 + (height // 4 - total_text_height // 2)
@@ -191,12 +181,11 @@ def add_text_to_image_centered_custom(img, custom_text, size, font_path, text_co
         shadow_offset = 2
         draw.text((x + shadow_offset, start_y + shadow_offset), line, font=font, fill=(0, 0, 0, 180))
 
-        # Main Text
+        # Main text
         draw.text((x, start_y), line, font=font, fill=text_color)
         start_y += line_height
 
     return img.convert("RGB")
-
 
 # ---------------- BUTTON & OUTPUT ----------------
 if st.button("🖼️ Generate Text Image"):
@@ -206,15 +195,12 @@ if st.button("🖼️ Generate Text Image"):
             img_with_text = add_text_to_image_centered_custom(
                 img, text_to_add, text_size, selected_font_path, text_color
             )
-            st.image(img_with_text, caption="Image with Text", use_column_width=True)
+            st.image(img_with_text.resize((640, 360)), caption="Image with Text", use_column_width=True)
 
-            # Download link
-            img_buffer = BytesIO()
-            img_with_text.save(img_buffer, format="PNG")
-            b64 = base64.b64encode(img_buffer.getvalue()).decode()
-            href = f'<a href="data:image/png;base64,{b64}" download="text_image.png">⬇️ Download Text Image</a>'
+            buffer = BytesIO()
+            img_with_text.resize((1280, 720)).save(buffer, format="JPEG")
+            b64 = base64.b64encode(buffer.getvalue()).decode()
+            href = f'<a href="data:image/jpeg;base64,{b64}" download="text_image.jpg">⬇️ Download JPG</a>'
             st.markdown(href, unsafe_allow_html=True)
     else:
         st.warning("⚠️ Please upload an image and enter some text.")
-
-
