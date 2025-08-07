@@ -157,10 +157,10 @@ st.markdown("### 🖋️ Add Text to an Uploaded Image")
 uploaded_img = st.file_uploader("Upload image", type=["jpg", "jpeg", "png"], key="add_text_img")
 text_to_add = st.text_area("Enter your custom text here:", height=100)
 
-# New: Text size control
+# Text size control
 text_size = st.slider("🔠 Text Size", min_value=10, max_value=100, value=30)
 
-# New: Font style selection
+# Font style selection
 font_options = {
     "Arial": "arial.ttf",
     "Courier": "cour.ttf",
@@ -170,11 +170,15 @@ font_options = {
 }
 font_choice = st.selectbox("🖋️ Font Style", list(font_options.keys()))
 
+# Function to add centered text
 def add_text_to_image_centered_custom(img, custom_text, size, font_path):
+    from PIL import ImageDraw, ImageFont
+    import textwrap
+
     img = img.convert("RGBA")
     draw = ImageDraw.Draw(img)
 
-    # Load selected font or fallback
+    # Load font
     try:
         if font_path:
             font = ImageFont.truetype(font_path, size)
@@ -183,23 +187,25 @@ def add_text_to_image_centered_custom(img, custom_text, size, font_path):
     except:
         font = ImageFont.load_default()
 
+    # Wrap and center text
     max_width = img.width - 40
-    lines = []
+    wrapped_lines = []
     for line in custom_text.split("\n"):
-        lines.extend(textwrap.wrap(line, width=60))
+        wrapped_lines.extend(textwrap.wrap(line, width=40))
 
-    total_height = sum([draw.textbbox((0, 0), line, font=font)[3] for line in lines]) + (len(lines) - 1) * 10
-    y = img.height // 2 + 20 - total_height // 2
+    line_height = font.getsize("Ay")[1] + 10
+    block_height = line_height * len(wrapped_lines)
+    y = (img.height - block_height) // 2
 
-    for line in lines:
-        bbox = draw.textbbox((0, 0), line, font=font)
-        text_width = bbox[2] - bbox[0]
+    for line in wrapped_lines:
+        text_width = font.getsize(line)[0]
         x = (img.width - text_width) // 2
         draw.text((x, y), line, font=font, fill="white")
-        y += bbox[3] + 10
+        y += line_height
 
     return img.convert("RGB")
 
+# Button to generate
 if st.button("🖼️ Generate Text Image"):
     if uploaded_img and text_to_add:
         with st.spinner("Processing image..."):
